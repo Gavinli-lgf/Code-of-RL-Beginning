@@ -5,7 +5,7 @@ import numpy as np
 #在打印策略的时候，将把每个state最大概率的动作打印出来
 #
 #第二点区别是，在v2版本里面，引入了trajectory的概念
-#通过getTrajectoryScore方法可以直接按照提供的policy，进行采样若干步
+#通过getTrajectoryScore方法可以直接按照提供的policy，进行若干步采样
 
 class GridWorld_v2(object): 
     # n行，m列，随机若干个forbiddenArea，随机若干个target
@@ -67,6 +67,8 @@ class GridWorld_v2(object):
                 s = s + tmp[self.scoreMap[i][j]]
             print(s)
         
+    # 输入:当前状态nowState(0~rows*columns),前状态下执行的动作action(0~5); 输出:动作的及时奖励score,下一个状态nextState; 
+    # 功能:输入当前状态nowState与执行动作action，输出该action的及时奖励与下一个状态.
     def getScore(self, nowState, action):
         nowx = nowState // self.columns
         nowy = nowState % self.columns
@@ -76,7 +78,7 @@ class GridWorld_v2(object):
         if(action<0 or action>=5 ):
             print(f"action error: ({action})")
             
-        # 上右下左 不动
+        # "上0,右1,下2,左3,不动4"5个action分别对应的坐标变化(actionList相当于"action序号与坐标变化的dict字典")
         actionList = [(-1,0),(0,1),(1,0),(0,-1),(0,0)]
         tmpx = nowx + actionList[action][0]
         tmpy = nowy + actionList[action][1]
@@ -85,6 +87,11 @@ class GridWorld_v2(object):
             return -1,nowState
         return self.scoreMap[tmpx][tmpy],self.stateMap[tmpx][tmpy]
 
+    # 输入: nowState:状态编号[0, rows*cols); action:动作编号[0, 5);
+    #      policy:是stochastic类型的,即单个state下的每个action有一定概率,概率总和为1.0(区别v1中的deteministic类policy).这里使用one-hot编码;
+    #      steps:采样的trajectory的长度(取100);
+    #      stop_when_reach_target:到达终点之后是否停止搜索,False 继续搜索,True 停止搜索;
+    # 输出: 采样得到的trajectory(长度是"steps+1",每个元素是一个(nowState, nowAction, score, nextState, nextAction)的元组.);
     def getTrajectoryScore(self, nowState, action, policy, steps, stop_when_reach_target=False):
         #policy是一个 (rows*columns) * actions的二维列表，其中每一行的总和为1，代表每个state选择五个action的概率总和为1
         #Attention: 返回值是一个大小为steps+1的列表，因为第一步也计算在里面了
@@ -100,6 +107,7 @@ class GridWorld_v2(object):
             nowAction = nextAction
 
             score, nextState = self.getScore(nowState, nowAction)
+            # np.random.choice 函数根据 policy[nextState] 中的概率分布，从 [0, 1, 2, 3, 4] 中随机选择一个动作，并将其赋值给 nextAction。
             nextAction = np.random.choice(range(5), size=1, replace=False, p=policy[nextState])[0]
 
             res.append((nowState, nowAction, score, nextState, nextAction))
@@ -113,6 +121,7 @@ class GridWorld_v2(object):
                     return res
         return res
 
+    # 该函数与GridWorld_v1的区别在于,stochastic显示state下概率最大的action(v1中的policy是deteministic的)
     def showPolicy(self, policy):
         #用emoji表情，可视化策略，在平常的可通过区域就用普通箭头⬆️➡️⬇️⬅️
         #但若是forbiddenArea，那就十万火急急急,于是变成了双箭头⏫︎⏩️⏬⏪
